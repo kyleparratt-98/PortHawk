@@ -4,30 +4,30 @@
   <img src="https://img.shields.io/badge/stars-potential-gold?style=for-the-badge" alt="Stars">
 </p>
 
-<h1 align="center">⚡ PortSentry ⚡</h1>
-<p align="center"><i>Live color-coded port monitoring with process names, right in your terminal</i></p>
+<h1 align="center">⚡ PortHawk ⚡</h1>
+<p align="center"><i>Real-time port monitoring at the speed of thought — watch every connection flow in your terminal</i></p>
 
 ---
 
 ## ✨ Why This Exists
-
-Every developer and sysadmin has been there: debugging a port conflict, hunting for a rogue process, or trying to understand why your application won't bind to port 8080. `netstat` gives you raw data. `lsof` gives you a firehose. `ss` gives you a snapshot. None of them give you a **live, color-coded, real-time dashboard** of every port on your machine with process names — and none of them handle permission errors gracefully without crashing. PortSentry fills that gap: one command, zero configuration, instant insight.
+You're debugging a rogue process, investigating a security incident, or just trying to understand what's happening on your network stack. You run `netstat` or `lsof` — and get a static wall of text that's outdated the instant it prints. PortHawk gives you a live-updating, color-coded dashboard of every TCP and UDP connection on your machine, with process names, PIDs, and real-time filtering. No polling scripts. No ancient tools. Just instant visibility.
 
 ## 🎯 Features
-
-- **Real-time live display** — Watch ports open, close, and change state as they happen, updated every second
-- **Color-coded status indicators** — Green for LISTEN, yellow for ESTABLISHED, red for TIME_WAIT — at a glance
-- **Process name resolution** — See exactly which process owns each port, including PID
-- **Graceful permission handling** — No crashes on privileged ports; shows `[Permission Denied]` in dim red instead
-- **Protocol and port filtering** — Focus on TCP, UDP, or a specific port with `-p tcp` and `-P 8080`
-- **Live keyboard controls** — Press `q` to quit, `p` to pause/resume the display
-- **Lightweight and cross-platform** — Uses `psutil` and `rich`, works on Linux, macOS, and Windows
+- **Live Streaming**: Connections update in real-time with zero lag — watch ports open and close as they happen
+- **Color-Coded UI**: Protocol, state, and access status are colorized for instant scanning
+- **Protocol Filtering**: Focus on TCP, TCP6, UDP, UDP6, or watch everything at once
+- **Port Filtering**: Zero in on a specific port to track a single service
+- **Process Resolution**: See which PID and process name owns each connection (when permissions allow)
+- **Keyboard Controls**: Press `p` to pause/resume, `q` to quit cleanly
+- **Custom Refresh Rate**: Set the polling interval from milliseconds to seconds
+- **Rich Terminal Output**: Beautiful tables powered by the `rich` library
 
 ## 📦 Installation
 
 ### Prerequisites
-- Python 3.8 or later
-- pip (Python package manager)
+- Python 3.8 or higher
+- `pip` package manager
+- Linux, macOS, or Windows (with admin/root for full process info)
 
 ### Quick Install
 ```bash
@@ -36,84 +36,65 @@ pip install port-sentry
 
 ### From Source
 ```bash
-git clone https://github.com/your-username/port-sentry.git
-cd port-sentry
+git clone https://github.com/your-username/porthawk.git
+cd porthawk
 pip install -e .
 ```
 
 ## 🚀 Quick Start
-
-Just run it. That's it. No flags, no config files, no setup.
-
 ```bash
+# Watch all network connections update live
 port-sentry
 ```
 
-You'll see a live, bordered table of all TCP and UDP connections, with color-coded states, process names, and PIDs. Press `q` to quit, `p` to pause.
-
 ## 📖 Usage
-
 ```bash
-# Monitor with a custom refresh interval (every 2 seconds)
-port-sentry -i 2
+# Monitor only TCP connections
+port-sentry --protocol tcp
 
-# Show only TCP connections
-port-sentry -p tcp
+# Watch a specific port (e.g., 8080) with 0.5s refresh
+port-sentry --port 8080 --interval 0.5
 
-# Show only UDP connections
-port-sentry -p udp
-
-# Filter to a specific port (e.g., 8080)
-port-sentry -P 8080
-
-# Combine filters: TCP only, port 80, 3-second refresh
-port-sentry -p tcp -P 80 -i 3
+# Filter to UDP6 connections
+port-sentry --protocol udp6
 ```
 
 ## 🏗️ Architecture
+PortHawk is built on three core modules:
 
-The codebase is organized into four cleanly separated modules:
-
-- **`monitor.py`** — Core data collection layer. Uses `psutil.net_connections()` to fetch all network connections, resolves process names via PID, and wraps everything in `ConnectionInfo` dataclass objects. Handles `psutil.AccessDenied` gracefully.
-- **`ui.py`** — Presentation layer. Uses the `rich` library's `Live` and `Table` components to render a real-time, color-coded, bordered table with keyboard controls (q/p).
-- **`cli.py`** — Entry point and argument parsing. Uses `argparse` to handle `-i`, `-p`, `-P`, and `--version` flags. Instantiates `PortMonitor` and `ConsoleUI`.
-- **`utils.py`** — Shared utilities: `get_state_color()` maps states to rich styles, `format_address()` formats address tuples, `resolve_pid_info()` safely resolves process names.
-
-Data flow: `CLI` → `PortMonitor.collect_connections()` → `ConnectionInfo` list → `ConsoleUI.make_table()` → `rich.live.Live` display.
+- **`monitor.py`**: Contains `PortMonitor` and `ConnectionInfo` — collects raw network connections via `psutil`, applies filters, and wraps each connection in a clean dataclass with resolved process info.
+- **`ui.py`**: `ConsoleUI` manages the live terminal display using `rich.Live` and `rich.Table`, handling keyboard input for pause/resume and exit.
+- **`cli.py`**: `CLI` parses command-line arguments (`--interval`, `--protocol`, `--port`, `--version`) and wires the monitor to the UI.
+- **`utils.py`**: Helper functions for PID-to-process-name resolution, state coloring, and address formatting.
 
 ## 📚 API Reference
 
-### `PortMonitor(refresh_interval=1.0, protocol_filter=None, port_filter=None)`
-
-The core data collector.
-
-- `collect_connections()` → `List[ConnectionInfo]` — Fetches all current network connections, applies filters, returns a list of `ConnectionInfo` dataclass instances.
-- `run()` — Continuous loop (used internally by `ConsoleUI`).
+### `PortMonitor(refresh_interval, protocol_filter, port_filter)`
+- **`collect_connections()`** → `List[ConnectionInfo]`: Returns all current filtered connections
+- **`run()`**: Continuous monitoring loop (used internally by ConsoleUI)
 
 ### `ConnectionInfo`
-
-Dataclass with fields: `proto`, `local_addr`, `local_port`, `state`, `pid`, `process_name`, `permission_denied`.
+| Field | Type | Description |
+|-------|------|-------------|
+| `proto` | `str` | `tcp`, `tcp6`, `udp`, `udp6` |
+| `local_addr` | `str` | Local IP address |
+| `local_port` | `int` | Local port number |
+| `state` | `str` | Connection state (e.g., `LISTEN`, `ESTABLISHED`, `UDP`) |
+| `pid` | `Optional[int]` | Process ID |
+| `process_name` | `Optional[str]` | Process name (e.g., `nginx`, `python3`) |
+| `permission_denied` | `bool` | Whether process info was inaccessible |
 
 ### `ConsoleUI(monitor)`
-
-Handles the live display.
-
-- `make_table(connections)` → `Table` — Builds a `rich.Table` from connection data.
-- `run()` — Starts the live display loop with keyboard event handling.
-
-### `CLI()`
-
-Command-line wrapper.
-
-- `parse_args()` → `argparse.Namespace` — Parses command-line arguments.
-- `run()` — Parses args, instantiates `PortMonitor` and `ConsoleUI`, starts monitoring.
+- **`run()`**: Starts the live display loop with keyboard controls
 
 ## 🤝 Contributing
-
-Contributions are welcome! Whether it's bug fixes, feature requests, or documentation improvements, please check out our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. The project is structured for easy extension — adding JSON/CSV export, sorting, or new filters is straightforward.
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+- Reporting bugs and requesting features
+- Setting up a development environment
+- Running tests and linting
+- Submitting pull requests
 
 ## 📄 License
-
 MIT © 2025
 
 ---
