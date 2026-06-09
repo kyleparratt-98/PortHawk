@@ -1,0 +1,1 @@
+Build a Python CLI tool that monitors local TCP/UDP port activity in real-time, extracts connection states and process names per port, and visually outputs them to standard out using a live-updating bordered table with color-coded status indicators. It must handle permission-denied errors for privileged ports gracefully.

@@ -1,0 +1,47 @@
+
+classDiagram
+    class PortMonitor {
+        -refresh_interval: float
+        -protocol_filter: Optional[str]
+        -port_filter: Optional[int]
+        +__init__(refresh_interval: float = 1.0, protocol_filter: Optional[str] = None, port_filter: Optional[int] = None)
+        +collect_connections() List[ConnectionInfo]
+        +run() None
+    }
+    class ConnectionInfo {
+        +proto: str
+        +local_addr: str
+        +local_port: int
+        +state: str
+        +pid: Optional[int]
+        +process_name: Optional[str]
+        +permission_denied: bool
+        +__init__(proto: str, local_addr: str, local_port: int, state: str, pid: Optional[int] = None, process_name: Optional[str] = None, permission_denied: bool = False)
+    }
+    class ConsoleUI {
+        -monitor: PortMonitor
+        -live: rich.live.Live
+        -table: rich.table.Table
+        -paused: bool
+        +__init__(monitor: PortMonitor)
+        +make_table(connections: List[ConnectionInfo]) rich.table.Table
+        +update_display() None
+        +run() None
+        +handle_keypress(key: str) None
+    }
+    class CLI {
+        +parser: argparse.ArgumentParser
+        +parse_args() argparse.Namespace
+        +run() None
+    }
+    class Utils {
+        +get_state_color(state: str) str
+        +format_address(addr: Tuple[str, int]) str
+        +resolve_pid_info(pid: int) Tuple[Optional[str], bool]
+    }
+    PortMonitor --> ConnectionInfo : collects
+    PortMonitor --> Utils : uses
+    ConsoleUI --> PortMonitor : contains
+    ConsoleUI --> Utils : uses
+    CLI --> PortMonitor : instantiates
+    CLI --> ConsoleUI : instantiates

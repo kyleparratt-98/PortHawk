@@ -1,0 +1,36 @@
+
+sequenceDiagram
+    participant C as CLI
+    participant PM as PortMonitor
+    participant CI as ConnectionInfo
+    participant U as Utils
+    participant UI as ConsoleUI
+    participant R as rich.live.Live
+    C->>C: parse_args()
+    C->>PM: PortMonitor(refresh_interval, protocol_filter, port_filter)
+    C->>UI: ConsoleUI(monitor)
+    C->>UI: run()
+    UI->>R: Live(console, refresh_per_second=1/interval)
+    UI->>R: start refresh loop
+    loop Every refresh_interval seconds
+        UI->>PM: collect_connections()
+        PM->>PM: Fetch raw connections via psutil.net_connections()
+        PM->>U: resolve_pid_info(pid) for each connection
+        alt Permission Denied
+            U-->>PM: (None, True)
+        else Success
+            U-->>PM: (process_name, False)
+        end
+        PM->>CI: ConnectionInfo(...) for each connection
+        PM-->>UI: List[ConnectionInfo]
+        UI->>UI: make_table(connections)
+        UI->>R: update table
+    end
+    UI->>UI: handle_keypress() on user input
+    alt Key 'q'
+        UI->>R: stop()
+    else Key 'p'
+        UI->>UI: toggle paused flag
+    end
+    R-->>UI: Display stops
+    UI-->>C: Exit
